@@ -1,14 +1,6 @@
 from app.data_loader import load_csv
-
 from app.profiler import profile_data
-
-from app.quality_checks import (
-    check_missing_values,
-    check_duplicates,
-    check_invalid_values,
-    check_outliers,
-)
-
+from app.quality_engine import run_quality_checks
 from app.scoring import calculate_quality_score
 
 
@@ -23,30 +15,32 @@ def analyze_dataset(file_path):
     # 2. Generate dataset profile
     profile = profile_data(df)
 
-    # 3. Run quality checks
-    missing_values = check_missing_values(df)
-    duplicate_count = check_duplicates(df)
-    invalid_count = check_invalid_values(df)
+    # 3. Run all quality checks through the Quality Engine
+    quality_results = run_quality_checks(df)
 
-    # 4. Detect outliers in all numerical columns
-    numeric_columns = df.select_dtypes(include="number").columns
+    # 4. Extract quality results
+    missing_results = quality_results["missing_results"]
+    duplicate_result = quality_results["duplicate_result"]
+    invalid_count = quality_results["invalid_count"]
+    outlier_count = quality_results["outlier_count"]
 
-    outlier_count = 0
+    # 5. Extract duplicate count from QualityResult
+    duplicate_count = duplicate_result.affected_count
 
-    for column in numeric_columns:
-        outlier_count += check_outliers(df, column)
-
-    # 5. Calculate issue rates
+    # 6. Calculate issue rates
     total_rows = len(df)
 
-    missing_count = sum(missing_values.values())
+    missing_count = sum(
+        result.affected_count
+        for result in missing_results
+    )
 
     missing_rate = missing_count / total_rows
     duplicate_rate = duplicate_count / total_rows
     invalid_rate = invalid_count / total_rows
     outlier_rate = outlier_count / total_rows
 
-    # 6. Calculate overall quality score
+    # 7. Calculate overall quality score
     quality_score = calculate_quality_score(
         missing_rate=missing_rate,
         duplicate_rate=duplicate_rate,
@@ -54,19 +48,14 @@ def analyze_dataset(file_path):
         outlier_rate=outlier_rate,
     )
 
-    # 7. Return complete analysis
+    # 8. Return complete analysis
     return {
         "profile": profile,
         "quality": {
-            "missing_values": missing_values,
-            "duplicate_count": duplicate_count,
+            "results": missing_results,
+            "duplicate_result": duplicate_result,
             "invalid_count": invalid_count,
             "outlier_count": outlier_count,
             "quality_score": quality_score,
         },
     }
-
-def test_analyzer_detects_outlier():
-    result = analyze_dataset("data/outlier_test_data.csv")
-
-    assert result["quality"]["outlier_count"] >= 1

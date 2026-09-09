@@ -10,11 +10,29 @@ from app.quality_checks import (
 def test_check_missing_values():
     df = load_csv("data/quality_test_data.csv")
 
-    missing_values = check_missing_values(df)
+    results = check_missing_values(df)
 
-    assert missing_values["age"] == 1
-    assert missing_values["city"] == 1
-    assert missing_values["salary"] == 1
+    age_result = next(
+        result for result in results
+        if result.column == "age"
+    )
+
+    city_result = next(
+        result for result in results
+        if result.column == "city"
+    )
+
+    salary_result = next(
+        result for result in results
+        if result.column == "salary"
+    )
+
+    assert age_result.affected_count == 1
+    assert city_result.affected_count == 1
+    assert salary_result.affected_count == 1
+
+    assert age_result.check_name == "missing_values"
+    assert age_result.passed is False
 
 def test_check_invalid_values():
     df = load_csv("data/invalid_test_data.csv")
@@ -36,7 +54,11 @@ def test_check_outliers():
 def test_check_duplicates():
     df = load_csv("data/duplicate_test_data.csv")
 
-    duplicate_count = check_duplicates(df)
+    result = check_duplicates(df)
 
-    assert duplicate_count == 1
-
+    assert result.check_name == "duplicates"
+    assert result.column is None
+    assert result.affected_count == 1
+    assert result.total_count == 5
+    assert result.rate == 0.20
+    assert result.passed is False
