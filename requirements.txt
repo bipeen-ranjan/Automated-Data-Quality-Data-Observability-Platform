@@ -1,0 +1,16 @@
+# Data processing
+pandas
+numpy
+
+# File handling
+openpyxl
+
+# Visualization
+matplotlib
+plotly
+
+# Dashboard
+streamlit
+
+# Testing
+pytest
