@@ -9,32 +9,37 @@ def analyze_dataset(file_path):
     Run the complete data quality analysis pipeline.
     """
 
-    # 1. Load the dataset
+    # 1. Load dataset
     df = load_csv(file_path)
 
-    # 2. Generate dataset profile
+    # 2. Generate profile
     profile = profile_data(df)
 
-    # 3. Run all quality checks through the Quality Engine
+    # 3. Run quality checks
     quality_results = run_quality_checks(df)
 
-    # 4. Extract quality results
+    # 4. Extract results
     missing_results = quality_results["missing_results"]
     duplicate_result = quality_results["duplicate_result"]
     invalid_result = quality_results["invalid_result"]
-    outlier_count = quality_results["outlier_count"]
+    outlier_results = quality_results["outlier_results"]
 
-    # 5. Extract issue counts from QualityResult objects
-    duplicate_count = duplicate_result.affected_count
-    invalid_count = invalid_result.affected_count
-
-    # 6. Calculate issue rates
-    total_rows = len(df)
-
+    # 5. Calculate issue counts
     missing_count = sum(
         result.affected_count
         for result in missing_results
     )
+
+    duplicate_count = duplicate_result.affected_count
+    invalid_count = invalid_result.affected_count
+
+    outlier_count = sum(
+        result.affected_count
+        for result in outlier_results
+    )
+
+    # 6. Calculate issue rates
+    total_rows = len(df)
 
     missing_rate = (
         missing_count / total_rows
@@ -60,7 +65,7 @@ def analyze_dataset(file_path):
         else 0
     )
 
-    # 7. Calculate overall quality score
+    # 7. Calculate quality score
     quality_score = calculate_quality_score(
         missing_rate=missing_rate,
         duplicate_rate=duplicate_rate,
@@ -72,10 +77,10 @@ def analyze_dataset(file_path):
     return {
         "profile": profile,
         "quality": {
-            "results": missing_results,
+            "missing_results": missing_results,
             "duplicate_result": duplicate_result,
             "invalid_result": invalid_result,
-            "outlier_count": outlier_count,
+            "outlier_results": outlier_results,
             "quality_score": quality_score,
         },
     }

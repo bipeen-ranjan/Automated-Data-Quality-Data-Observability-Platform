@@ -13,8 +13,17 @@ def test_analyze_dataset():
     assert "quality_score" in result["quality"]
     assert 0 <= result["quality"]["quality_score"] <= 100
 
+    assert "outlier_results" in result["quality"]
+
 
 def test_analyzer_detects_outlier():
     result = analyze_dataset("data/outlier_test_data.csv")
 
-    assert result["quality"]["outlier_count"] >= 1
+    outlier_results = result["quality"]["outlier_results"]
+
+    total_outliers = sum(
+        item.affected_count
+        for item in outlier_results
+    )
+
+    assert total_outliers >= 1

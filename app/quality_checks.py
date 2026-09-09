@@ -43,7 +43,6 @@ def check_missing_values(df):
     return results
 
 
-
 def check_duplicates(df):
     """
     Check for duplicate rows in the dataset.
@@ -80,6 +79,7 @@ def check_duplicates(df):
         message=message,
     )
 
+
 def check_invalid_values(df):
     """
     Check for invalid age and salary values.
@@ -91,12 +91,10 @@ def check_invalid_values(df):
 
     invalid_count = 0
 
-    # Check age only if the column exists
     if "age" in df.columns:
         invalid_age = (df["age"] < 0) | (df["age"] > 120)
         invalid_count += int(invalid_age.sum())
 
-    # Check salary only if the column exists
     if "salary" in df.columns:
         invalid_salary = df["salary"] < 0
         invalid_count += int(invalid_salary.sum())
@@ -130,7 +128,11 @@ def check_invalid_values(df):
 def check_outliers(df, column):
     """
     Detect outliers in a numerical column using the IQR method.
+
+    Returns a QualityResult describing the detected outliers.
     """
+
+    total_rows = len(df)
 
     q1 = df[column].quantile(0.25)
     q3 = df[column].quantile(0.75)
@@ -140,9 +142,34 @@ def check_outliers(df, column):
     lower_limit = q1 - 1.5 * iqr
     upper_limit = q3 + 1.5 * iqr
 
-    outliers = df[
-        (df[column] < lower_limit) |
-        (df[column] > upper_limit)
-    ]
+    outliers = (
+        (df[column] < lower_limit)
+        | (df[column] > upper_limit)
+    )
 
-    return len(outliers)
+    outlier_count = int(outliers.sum())
+
+    rate = outlier_count / total_rows if total_rows > 0 else 0
+
+    if outlier_count == 0:
+        severity = "info"
+        message = "No outliers detected."
+    elif rate <= 0.05:
+        severity = "warning"
+        message = "A small number of outliers detected."
+    elif rate <= 0.20:
+        severity = "error"
+        message = "A significant number of outliers detected."
+    else:
+        severity = "critical"
+        message = "A large number of outliers detected."
+
+    return QualityResult(
+        check_name="outliers",
+        column=column,
+        affected_count=outlier_count,
+        total_count=total_rows,
+        rate=rate,
+        severity=severity,
+        message=message,
+    )

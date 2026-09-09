@@ -21,17 +21,18 @@ def run_quality_checks(df):
     invalid_result = check_invalid_values(df)
 
     # 4. Outlier checks for numerical columns
+    outlier_results = []
+
     numeric_columns = df.select_dtypes(include="number").columns
 
-    outlier_count = 0
-
     for column in numeric_columns:
-        outlier_count += check_outliers(df, column)
+        result = check_outliers(df, column)
+        outlier_results.append(result)
 
     # 5. Return all quality-check results
     return {
         "missing_results": missing_results,
         "duplicate_result": duplicate_result,
         "invalid_result": invalid_result,
-        "outlier_count": outlier_count,
+        "outlier_results": outlier_results,
     }
