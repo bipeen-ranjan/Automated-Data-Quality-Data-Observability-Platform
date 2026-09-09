@@ -37,9 +37,14 @@ def test_check_missing_values():
 def test_check_invalid_values():
     df = load_csv("data/invalid_test_data.csv")
 
-    invalid_count = check_invalid_values(df)
+    result = check_invalid_values(df)
 
-    assert invalid_count == 3    
+    assert result.check_name == "invalid_values"
+    assert result.column is None
+    assert result.affected_count == 3
+    assert result.total_count == 5
+    assert result.rate == 0.60
+    assert result.passed is False  
 
 
 def test_check_outliers():

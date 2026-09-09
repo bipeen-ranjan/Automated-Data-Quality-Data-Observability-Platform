@@ -18,7 +18,7 @@ def run_quality_checks(df):
     duplicate_result = check_duplicates(df)
 
     # 3. Invalid-value check
-    invalid_count = check_invalid_values(df)
+    invalid_result = check_invalid_values(df)
 
     # 4. Outlier checks for numerical columns
     numeric_columns = df.select_dtypes(include="number").columns
@@ -32,6 +32,6 @@ def run_quality_checks(df):
     return {
         "missing_results": missing_results,
         "duplicate_result": duplicate_result,
-        "invalid_count": invalid_count,
+        "invalid_result": invalid_result,
         "outlier_count": outlier_count,
     }

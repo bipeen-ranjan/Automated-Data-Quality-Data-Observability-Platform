@@ -9,10 +9,10 @@ def test_run_quality_checks():
 
     assert "missing_results" in results
     assert "duplicate_result" in results
-    assert "invalid_count" in results
+    assert "invalid_result" in results
     assert "outlier_count" in results
 
     assert len(results["missing_results"]) == 5
 
     assert results["duplicate_result"].affected_count == 0
-    assert results["invalid_count"] == 0
+    assert results["invalid_result"].affected_count == 0

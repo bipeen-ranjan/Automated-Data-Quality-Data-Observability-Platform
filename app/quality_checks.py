@@ -83,14 +83,48 @@ def check_duplicates(df):
 def check_invalid_values(df):
     """
     Check for invalid age and salary values.
+
+    Returns a QualityResult describing the invalid values.
     """
 
-    invalid_age = (df["age"] < 0) | (df["age"] > 120)
-    invalid_salary = df["salary"] < 0
+    total_rows = len(df)
 
-    invalid_count = invalid_age.sum() + invalid_salary.sum()
+    invalid_count = 0
 
-    return int(invalid_count)
+    # Check age only if the column exists
+    if "age" in df.columns:
+        invalid_age = (df["age"] < 0) | (df["age"] > 120)
+        invalid_count += int(invalid_age.sum())
+
+    # Check salary only if the column exists
+    if "salary" in df.columns:
+        invalid_salary = df["salary"] < 0
+        invalid_count += int(invalid_salary.sum())
+
+    rate = invalid_count / total_rows if total_rows > 0 else 0
+
+    if invalid_count == 0:
+        severity = "info"
+        message = "No invalid values detected."
+    elif rate <= 0.05:
+        severity = "warning"
+        message = "A small number of invalid values detected."
+    elif rate <= 0.20:
+        severity = "error"
+        message = "A significant number of invalid values detected."
+    else:
+        severity = "critical"
+        message = "A large number of invalid values detected."
+
+    return QualityResult(
+        check_name="invalid_values",
+        column=None,
+        affected_count=invalid_count,
+        total_count=total_rows,
+        rate=rate,
+        severity=severity,
+        message=message,
+    )
 
 
 def check_outliers(df, column):
