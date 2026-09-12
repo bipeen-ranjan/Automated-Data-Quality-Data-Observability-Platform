@@ -27,3 +27,30 @@ def test_analyzer_detects_outlier():
     )
 
     assert total_outliers >= 1
+
+
+def test_analyzer_calculates_valid_rates():
+
+    result = analyze_dataset(
+        "data/quality_test_data.csv"
+    )
+
+    metrics = result["quality"]["metrics"]
+
+    assert metrics["total_cells"] > 0
+
+    assert (
+        0 <= metrics["missing_rate"] <= 1
+    )
+
+    assert (
+        0 <= metrics["duplicate_rate"] <= 1
+    )
+
+    assert (
+        0 <= metrics["invalid_rate"] <= 1
+    )
+
+    assert (
+        0 <= metrics["outlier_rate"] <= 1
+    )    

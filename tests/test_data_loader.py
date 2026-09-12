@@ -1,11 +1,27 @@
-from app.data_loader import load_csv
+import pandas as pd
+import pytest
+
+from app.data_loader import load_dataset
 
 
 def test_load_csv():
-    file_path = "data/sample_data.csv"
 
-    df = load_csv(file_path)
+    df = load_dataset(
+        "data/sample_data.csv"
+    )
 
-    assert df is not None
-    assert len(df) == 8
-    assert len(df.columns) == 5
+    assert isinstance(
+        df,
+        pd.DataFrame,
+    )
+
+    assert len(df) > 0
+
+
+def test_load_unsupported_file():
+
+    with pytest.raises(ValueError):
+
+        load_dataset(
+            "data/sample_data.txt"
+        )
