@@ -17,3 +17,9 @@ pytest
 
 # API testing
 httpx
+
+# PostgreSQL
+psycopg[binary]
+
+# Environment variables
+python-dotenv
