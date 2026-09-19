@@ -9,6 +9,7 @@ import tempfile
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from app.analyzer import analyze_dataset
+from app.repositories.analysis_repository import create_analysis_run
 
 
 app = FastAPI(
@@ -30,8 +31,7 @@ SUPPORTED_EXTENSIONS = {
 
 def quality_result_to_dict(result):
     """
-    Convert a QualityResult object into
-    a JSON-serializable dictionary.
+    Convert a QualityResult object into a JSON-serializable dictionary.
     """
 
     return {
@@ -49,20 +49,18 @@ def quality_result_to_dict(result):
 @app.get("/")
 def root():
     """
-    Root endpoint.
+    Basic API information endpoint.
     """
 
     return {
-        "message": (
-            "Automated Data Quality API is running."
-        )
+        "message": "Automated Data Quality API is running."
     }
 
 
 @app.get("/health")
 def health_check():
     """
-    Health-check endpoint.
+    Health check endpoint.
     """
 
     return {
@@ -72,29 +70,33 @@ def health_check():
 
 @app.post("/analyze")
 async def analyze_file(
-    file: UploadFile = File(...),
+    file: UploadFile = File(...)
 ):
     """
-    Analyze an uploaded CSV or Excel dataset.
+    Upload a CSV/XLSX/XLS file, analyze its data quality,
+    save the analysis summary to PostgreSQL, and return
+    the complete analysis result.
     """
 
-    # --------------------------------------------------
-    # Validate filename
-    # --------------------------------------------------
+    # ---------------------------------------------------------
+    # 1. Validate filename
+    # ---------------------------------------------------------
 
     if not file.filename:
-
         raise HTTPException(
             status_code=400,
             detail="No filename was provided.",
         )
+
+    # ---------------------------------------------------------
+    # 2. Validate file extension
+    # ---------------------------------------------------------
 
     extension = os.path.splitext(
         file.filename
     )[1].lower()
 
     if extension not in SUPPORTED_EXTENSIONS:
-
         raise HTTPException(
             status_code=400,
             detail=(
@@ -107,53 +109,76 @@ async def analyze_file(
 
     try:
 
-        # --------------------------------------------------
-        # Read uploaded file
-        # --------------------------------------------------
+        # -----------------------------------------------------
+        # 3. Read uploaded file
+        # -----------------------------------------------------
 
         file_content = await file.read()
 
         if not file_content:
-
             raise HTTPException(
                 status_code=400,
                 detail="Uploaded file is empty.",
             )
 
-        # --------------------------------------------------
-        # Save temporary file
-        # --------------------------------------------------
+        # -----------------------------------------------------
+        # 4. Create temporary file
+        # -----------------------------------------------------
 
         with tempfile.NamedTemporaryFile(
             delete=False,
             suffix=extension,
         ) as temp_file:
 
-            temp_file.write(
-                file_content
-            )
+            temp_file.write(file_content)
 
             temp_file_path = temp_file.name
 
-        # --------------------------------------------------
-        # Run existing analysis engine
-        # --------------------------------------------------
+        # -----------------------------------------------------
+        # 5. Run existing data-quality engine
+        # -----------------------------------------------------
 
         analysis = analyze_dataset(
             temp_file_path
         )
 
-        profile = analysis[
-            "profile"
+        profile = analysis["profile"]
+        quality = analysis["quality"]
+
+        # -----------------------------------------------------
+        # 6. Extract quality dimensions
+        # -----------------------------------------------------
+
+        quality_dimensions = quality[
+            "quality_dimensions"
         ]
 
-        quality = analysis[
-            "quality"
-        ]
+        # -----------------------------------------------------
+        # 7. Save analysis summary to PostgreSQL
+        # -----------------------------------------------------
 
-        # --------------------------------------------------
-        # Convert QualityResult objects
-        # --------------------------------------------------
+        analysis_id = create_analysis_run(
+            filename=file.filename,
+            rows_count=profile["rows"],
+            columns_count=profile["columns"],
+            quality_score=quality["quality_score"],
+            completeness=quality_dimensions[
+                "completeness"
+            ],
+            uniqueness=quality_dimensions[
+                "uniqueness"
+            ],
+            validity=quality_dimensions[
+                "validity"
+            ],
+            consistency=quality_dimensions[
+                "consistency"
+            ],
+        )
+
+        # -----------------------------------------------------
+        # 8. Convert QualityResult objects to dictionaries
+        # -----------------------------------------------------
 
         missing_results = [
             quality_result_to_dict(result)
@@ -176,34 +201,25 @@ async def analyze_file(
             ]
         ]
 
-        duplicate_result = (
-            quality_result_to_dict(
-                quality[
-                    "duplicate_result"
-                ]
-            )
+        duplicate_result = quality_result_to_dict(
+            quality["duplicate_result"]
         )
 
-        # --------------------------------------------------
-        # Build API response
-        # --------------------------------------------------
+        # -----------------------------------------------------
+        # 9. Return complete API response
+        # -----------------------------------------------------
 
         return {
+            "analysis_id": analysis_id,
+
             "filename": file.filename,
 
             "profile": {
-                "rows": profile[
-                    "rows"
-                ],
-
-                "columns": profile[
-                    "columns"
-                ],
-
+                "rows": profile["rows"],
+                "columns": profile["columns"],
                 "column_names": profile[
                     "column_names"
                 ],
-
                 "data_types": profile[
                     "data_types"
                 ],
@@ -236,8 +252,16 @@ async def analyze_file(
             },
         }
 
+    # ---------------------------------------------------------
+    # 10. Preserve FastAPI HTTP errors
+    # ---------------------------------------------------------
+
     except HTTPException:
         raise
+
+    # ---------------------------------------------------------
+    # 11. Handle unexpected errors
+    # ---------------------------------------------------------
 
     except Exception as e:
 
@@ -248,20 +272,18 @@ async def analyze_file(
             ),
         )
 
-    finally:
+    # ---------------------------------------------------------
+    # 12. Always remove temporary file
+    # ---------------------------------------------------------
 
-        # --------------------------------------------------
-        # Delete temporary file
-        # --------------------------------------------------
+    finally:
 
         if temp_file_path is not None:
 
             try:
-
                 os.remove(
                     temp_file_path
                 )
 
             except OSError:
-
                 pass

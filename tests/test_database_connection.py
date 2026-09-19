@@ -1,3 +1,5 @@
+import os
+
 from app.database import get_connection
 
 
@@ -15,7 +17,13 @@ def test_database_connection():
 
             database_name = cursor.fetchone()[0]
 
-        assert database_name == "data_quality_db"
+        expected_database = os.getenv(
+            "DB_NAME"
+        )
+
+        assert database_name == expected_database
+
+        assert database_name == "data_quality_test_db"
 
     finally:
 

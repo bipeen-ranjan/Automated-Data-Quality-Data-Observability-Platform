@@ -24,11 +24,6 @@ DB_PORT = os.getenv(
     "5432",
 )
 
-DB_NAME = os.getenv(
-    "DB_NAME",
-    "data_quality_db",
-)
-
 DB_USER = os.getenv(
     "DB_USER",
     "postgres",
@@ -42,12 +37,20 @@ DB_PASSWORD = os.getenv(
 def get_connection():
     """
     Create and return a PostgreSQL database connection.
+
+    The database name is read from the environment
+    each time a connection is created.
     """
+
+    database_name = os.getenv(
+        "DB_NAME",
+        "data_quality_db",
+    )
 
     return psycopg.connect(
         host=DB_HOST,
         port=DB_PORT,
-        dbname=DB_NAME,
+        dbname=database_name,
         user=DB_USER,
         password=DB_PASSWORD,
     )
